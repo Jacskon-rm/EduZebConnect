@@ -27,15 +27,7 @@ class RecommendationsActivity extends AppCompatActivity {
     }
 }
 
-class DocumentsActivity extends AppCompatActivity {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setTitle("My Documents");
-        Toast.makeText(this, "Documents - Coming Soon!", Toast.LENGTH_SHORT).show();
-        finish();
-    }
-}
+
 
 class NotificationsActivity extends AppCompatActivity {
     @Override
