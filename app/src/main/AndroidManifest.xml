@@ -1,8 +1,6 @@
-
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.eduzeb.connect">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
@@ -12,6 +10,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature 
         android:name="android.hardware.camera"
@@ -37,7 +36,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Main Activity -->
+        <!-- Main Login Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -48,14 +47,103 @@
             </intent-filter>
         </activity>
 
+        <!-- Registration -->
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false"
+            android:theme="@style/Theme.EduZebConnect.NoActionBar" />
+
+        <!-- Student Activities -->
+        <activity
+            android:name=".StudentDashboardActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".SearchSchoolsActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".DocumentsActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".MyApplicationsActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".RecommendationsActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".NotificationsActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <activity
+            android:name=".NewApplicationActivity"
+            android:exported="false"
+            android:parentActivityName=".StudentDashboardActivity" />
+
+        <!-- Admin Activities -->
+        <activity
+            android:name=".AdminDashboardActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".ManageApplicationsActivity"
+            android:exported="false"
+            android:parentActivityName=".AdminDashboardActivity" />
+
+        <activity
+            android:name=".ManageSchoolsActivity"
+            android:exported="false"
+            android:parentActivityName=".AdminDashboardActivity" />
+
         <!-- Other Activities -->
-        <activity android:name=".RegisterActivity" android:exported="false" />
-        <activity android:name=".StudentDashboardActivity" android:exported="false" />
-        <activity android:name=".AdminDashboardActivity" android:exported="false" />
-        <activity android:name=".SearchSchoolsActivity" android:exported="false" />
-        <activity android:name=".DocumentsActivity" android:exported="false" />
-        <activity android:name=".ManageApplicationsActivity" android:exported="false" />
-        <activity android:name=".ManageSchoolsActivity" android:exported="false" />
+        <activity
+            android:name=".ForgotPasswordActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".SchoolDetailActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".DocumentViewerActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".StudentAnalyticsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ReportsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AdminNotificationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AdminSettingsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
 
     </application>
+
 </manifest>
