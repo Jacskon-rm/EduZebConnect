@@ -1,1 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary_blue">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#BBDEFB</color>
+    
+    <!-- Secondary Colors -->
+    <color name="accent_orange">#FF9800</color>
+    <color name="accent_orange_dark">#F57C00</color>
+    <color name="accent_orange_light">#FFE0B2</color>
+    
+    <!-- Success Colors -->
+    <color name="success_green">#4CAF50</color>
+    <color name="success_green_dark">#388E3C</color>
+    <color name="success_green_light">#C8E6C9</color>
+    
+    <!-- Warning Colors -->
+    <color name="warning_yellow">#FFC107</color>
+    <color name="warning_yellow_dark">#F57F17</color>
+    <color name="warning_yellow_light">#FFF9C4</color>
+    
+    <!-- Error Colors -->
+    <color name="error_red">#F44336</color>
+    <color name="error_red_dark">#D32F2F</color>
+    <color name="error_red_light">#FFCDD2</color>
+    
+    <!-- Neutral Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="light_gray">#E0E0E0</color>
+    <color name="medium_gray">#9E9E9E</color>
+    <color name="dark_gray">#424242</color>
+    
+    <!-- Background Colors -->
+    <color name="light_background">#F5F5F5</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="divider_color">#E0E0E0</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#667eea</color>
+    <color name="gradient_end">#764ba2</color>
+    
+    <!-- Card Gradient Colors -->
+    <color name="card_search_start">#667eea</color>
+    <color name="card_search_end">#764ba2</color>
+    
+    <color name="card_applications_start">#f093fb</color>
+    <color name="card_applications_end">#f5576c</color>
+    
+    <color name="card_recommendations_start">#4facfe</color>
+    <color name="card_recommendations_end">#00f2fe</color>
+    
+    <color name="card_documents_start">#43e97b</color>
+    <color name="card_documents_end">#38f9d7</color>
+    
+    <color name="card_notifications_start">#fa709a</color>
+    <color name="card_notifications_end">#fee140</color>
+    
+    <color name="card_profile_start">#a8edea</color>
+    <color name="card_profile_end">#fed6e3</color>
+    
+    <!-- Status Colors -->
+    <color name="status_pending">#FF9800</color>
+    <color name="status_approved">#4CAF50</color>
+    <color name="status_rejected">#F44336</color>
+    <color name="status_under_review">#2196F3</color>
+    
+    <!-- Rating Colors -->
+    <color name="star_filled">#FFD700</color>
+    <color name="star_empty">#E0E0E0</color>
 
+    <!-- Material Design Colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+</resources>
