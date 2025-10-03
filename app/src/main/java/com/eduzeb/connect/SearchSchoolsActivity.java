@@ -1,4 +1,3 @@
-
 package com.eduzeb.connect;
 
 import android.content.Intent;
@@ -8,9 +7,10 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
-import android:widget.ImageView;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -25,23 +26,27 @@ import java.util.List;
 
 public class SearchSchoolsActivity extends AppCompatActivity {
 
-    private TextInputEditText etSearchQuery, etLocation;
+    private TextInputEditText etSearchQuery;
+    private TextView tvCurrentDistrict, tvResultsCount;
+    private MaterialButton btnDetectLocation, btnUseAI;
     private AutoCompleteTextView spinnerSchoolType;
     private RecyclerView rvSchools;
-    private TextView tvResultsCount;
-    private ImageView ivFilterToggle, ivSortToggle;
-    private LinearLayout layoutEmptyState;
-    private MaterialButton btnShowAllSchools;
+    private LinearLayout layoutEmptyState, layoutLocationInfo;
+    private FloatingActionButton fabFilter;
     
     private SchoolAdapter schoolAdapter;
     private DatabaseHelper dbHelper;
+    private LocationHelper locationHelper;
+    private SchoolPerformanceAI performanceAI;
+    
     private List<School> allSchools;
     private List<School> filteredSchools;
     
+    private int userId;
+    private String currentDistrict = "";
     private String currentQuery = "";
     private String currentType = "all";
-    private String currentLocation = "";
-    private String currentSortBy = "rating"; // rating, name, fees
+    private boolean aiEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,24 +55,29 @@ public class SearchSchoolsActivity extends AppCompatActivity {
 
         initializeViews();
         setupToolbar();
-        setupFilters();
+        getUserData();
         setupRecyclerView();
         setupClickListeners();
-        loadSchools();
+        setupFilters();
+        detectUserLocation();
     }
 
     private void initializeViews() {
         etSearchQuery = findViewById(R.id.etSearchQuery);
-        etLocation = findViewById(R.id.etLocation);
+        tvCurrentDistrict = findViewById(R.id.tvCurrentDistrict);
+        tvResultsCount = findViewById(R.id.tvResultsCount);
+        btnDetectLocation = findViewById(R.id.btnDetectLocation);
+        btnUseAI = findViewById(R.id.btnUseAI);
         spinnerSchoolType = findViewById(R.id.spinnerSchoolType);
         rvSchools = findViewById(R.id.rvSchools);
-        tvResultsCount = findViewById(R.id.tvResultsCount);
-        ivFilterToggle = findViewById(R.id.ivFilterToggle);
-        ivSortToggle = findViewById(R.id.ivSortToggle);
         layoutEmptyState = findViewById(R.id.layoutEmptyState);
-        btnShowAllSchools = findViewById(R.id.btnShowAllSchools);
+        layoutLocationInfo = findViewById(R.id.layoutLocationInfo);
+        fabFilter = findViewById(R.id.fabFilter);
         
         dbHelper = new DatabaseHelper(this);
+        locationHelper = new LocationHelper(this);
+        performanceAI = new SchoolPerformanceAI(this);
+        
         allSchools = new ArrayList<>();
         filteredSchools = new ArrayList<>();
     }
@@ -77,54 +87,14 @@ public class SearchSchoolsActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Search Schools");
+            getSupportActionBar().setTitle("Find Schools");
         }
-        
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
     }
 
-    private void setupFilters() {
-        // Setup school type dropdown
-        String[] schoolTypes = {"All Types", "Public", "Private"};
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, schoolTypes);
-        spinnerSchoolType.setAdapter(typeAdapter);
-        spinnerSchoolType.setText(schoolTypes[0], false);
-        
-        // Setup search listeners
-        etSearchQuery.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                currentQuery = s.toString().trim();
-                performSearch();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
-        etLocation.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                currentLocation = s.toString().trim();
-                performSearch();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        });
-
-        spinnerSchoolType.setOnItemClickListener((parent, view, position, id) -> {
-            String selected = (String) parent.getItemAtPosition(position);
-            currentType = selected.equals("All Types") ? "all" : selected.toLowerCase();
-            performSearch();
-        });
+    private void getUserData() {
+        Intent intent = getIntent();
+        userId = intent.getIntExtra("user_id", -1);
     }
 
     private void setupRecyclerView() {
@@ -134,50 +104,172 @@ public class SearchSchoolsActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        btnShowAllSchools.setOnClickListener(v -> {
-            clearFilters();
-            loadSchools();
+        btnDetectLocation.setOnClickListener(v -> detectUserLocation());
+        
+        btnUseAI.setOnClickListener(v -> toggleAIMode());
+        
+        fabFilter.setOnClickListener(v -> showFilterOptions());
+    }
+
+    private void setupFilters() {
+        // Search functionality
+        etSearchQuery.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentQuery = s.toString().trim().toLowerCase();
+                filterSchools();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
         });
 
-        ivSortToggle.setOnClickListener(v -> showSortOptions());
+        // School type dropdown
+        String[] schoolTypes = {"All Types", "Public", "Private"};
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, schoolTypes);
+        spinnerSchoolType.setAdapter(typeAdapter);
+        spinnerSchoolType.setText(schoolTypes[0], false);
         
-        ivFilterToggle.setOnClickListener(v -> showAdvancedFilters());
+        spinnerSchoolType.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            currentType = selected.equals("All Types") ? "all" : selected.toLowerCase();
+            filterSchools();
+        });
     }
 
-    private void loadSchools() {
+    private void detectUserLocation() {
+        btnDetectLocation.setEnabled(false);
+        btnDetectLocation.setText("Detecting...");
+        
+        locationHelper.getCurrentLocation(new LocationHelper.LocationCallback() {
+            @Override
+            public void onLocationDetected(String district, double latitude, double longitude) {
+                currentDistrict = district;
+                tvCurrentDistrict.setText("📍 " + district);
+                layoutLocationInfo.setVisibility(View.VISIBLE);
+                
+                // Save to student profile
+                StudentProfile profile = dbHelper.getStudentProfile(userId);
+                if (profile == null) {
+                    profile = new StudentProfile(userId, 0, new String[]{}, 
+                            new String[]{}, district, latitude, longitude);
+                } else {
+                    profile.setDistrict(district);
+                    profile.setLocation(latitude, longitude);
+                }
+                dbHelper.saveStudentProfile(userId, profile);
+                
+                // Load schools in district
+                loadSchoolsByDistrict(district);
+                
+                btnDetectLocation.setText("Location Detected ✓");
+                btnDetectLocation.setEnabled(true);
+                
+                Toast.makeText(SearchSchoolsActivity.this, 
+                        "Location detected: " + district, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onLocationError(String error) {
+                btnDetectLocation.setText("Detect Location");
+                btnDetectLocation.setEnabled(true);
+                Toast.makeText(SearchSchoolsActivity.this, 
+                        "Error: " + error, Toast.LENGTH_LONG).show();
+                
+                // Load all schools as fallback
+                loadAllSchools();
+            }
+        });
+    }
+
+    private void loadSchoolsByDistrict(String district) {
+        allSchools = dbHelper.getSchoolsByDistrict(district);
+        
+        if (aiEnabled) {
+            fetchAIPerformanceForSchools();
+        }
+        
+        filterSchools();
+    }
+
+    private void loadAllSchools() {
         allSchools = dbHelper.getAllSchools();
-        performSearch();
+        filterSchools();
     }
 
-    private void performSearch() {
-        if (currentQuery.isEmpty() && currentType.equals("all") && currentLocation.isEmpty()) {
-            filteredSchools.clear();
-            filteredSchools.addAll(allSchools);
+    private void toggleAIMode() {
+        aiEnabled = !aiEnabled;
+        
+        if (aiEnabled) {
+            btnUseAI.setBackgroundColor(getResources().getColor(R.color.success_green));
+            btnUseAI.setText("AI Mode: ON");
+            Toast.makeText(this, "AI Performance Analysis Enabled", Toast.LENGTH_SHORT).show();
+            
+            if (!allSchools.isEmpty()) {
+                fetchAIPerformanceForSchools();
+            }
         } else {
-            filteredSchools = dbHelper.searchSchools(
-                currentQuery.isEmpty() ? null : currentQuery,
-                currentType.equals("all") ? null : currentType,
-                currentLocation.isEmpty() ? null : currentLocation
-            );
+            btnUseAI.setBackgroundColor(getResources().getColor(R.color.primary_blue));
+            btnUseAI.setText("Enable AI Analysis");
+        }
+    }
+
+    private void fetchAIPerformanceForSchools() {
+        Toast.makeText(this, "Analyzing school performance with AI...", Toast.LENGTH_SHORT).show();
+        
+        for (School school : allSchools) {
+            // Check if we already have performance data
+            SchoolPerformance existing = dbHelper.getSchoolPerformance(school.getId());
+            
+            if (existing == null) {
+                // Fetch from AI
+                performanceAI.analyzeSchoolPerformance(school.getName(), currentDistrict,
+                        new SchoolPerformanceAI.PerformanceCallback() {
+                            @Override
+                            public void onPerformanceDataReceived(SchoolPerformance performance) {
+                                dbHelper.saveSchoolPerformance(school.getId(), performance);
+                                runOnUiThread(() -> {
+                                    Toast.makeText(SearchSchoolsActivity.this,
+                                            "Performance data updated for " + school.getName(),
+                                            Toast.LENGTH_SHORT).show();
+                                    filterSchools(); // Refresh display
+                                });
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                runOnUiThread(() -> {
+                                    Toast.makeText(SearchSchoolsActivity.this,
+                                            "AI analysis error: " + error,
+                                            Toast.LENGTH_SHORT).show();
+                                });
+                            }
+                        });
+            }
+        }
+    }
+
+    private void filterSchools() {
+        filteredSchools.clear();
+        
+        for (School school : allSchools) {
+            boolean matchesType = currentType.equals("all") || 
+                    school.getType().equals(currentType);
+            
+            boolean matchesSearch = currentQuery.isEmpty() ||
+                    school.getName().toLowerCase().contains(currentQuery) ||
+                    school.getLocation().toLowerCase().contains(currentQuery);
+            
+            if (matchesType && matchesSearch) {
+                filteredSchools.add(school);
+            }
         }
         
-        sortSchools();
         updateUI();
-    }
-
-    private void sortSchools() {
-        switch (currentSortBy) {
-            case "name":
-                filteredSchools.sort((s1, s2) -> s1.getName().compareToIgnoreCase(s2.getName()));
-                break;
-            case "fees":
-                filteredSchools.sort((s1, s2) -> Integer.compare(s1.getFees(), s2.getFees()));
-                break;
-            case "rating":
-            default:
-                filteredSchools.sort((s1, s2) -> Double.compare(s2.getRating(), s1.getRating()));
-                break;
-        }
     }
 
     private void updateUI() {
@@ -195,61 +287,25 @@ public class SearchSchoolsActivity extends AppCompatActivity {
         }
     }
 
-    private void clearFilters() {
-        etSearchQuery.setText("");
-        etLocation.setText("");
-        spinnerSchoolType.setText("All Types", false);
-        currentQuery = "";
-        currentType = "all";
-        currentLocation = "";
-    }
-
-    private void showSortOptions() {
-        String[] sortOptions = {"Rating (High to Low)", "Name (A-Z)", "Fees (Low to High)"};
-        
-        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(this);
-        builder.setTitle("Sort by")
-                .setItems(sortOptions, (dialog, which) -> {
-                    switch (which) {
-                        case 0:
-                            currentSortBy = "rating";
-                            break;
-                        case 1:
-                            currentSortBy = "name";
-                            break;
-                        case 2:
-                            currentSortBy = "fees";
-                            break;
-                    }
-                    performSearch();
-                });
-        builder.show();
-    }
-
-    private void showAdvancedFilters() {
-        // This could open a bottom sheet or dialog with more filter options
-        // For now, show a simple toast
-        android.widget.Toast.makeText(this, "Advanced filters coming soon!", 
-            android.widget.Toast.LENGTH_SHORT).show();
-    }
-
     private void onSchoolClick(School school) {
-        Intent intent = new Intent(this, SchoolDetailActivity.class);
-        intent.putExtra("school_id", school.getId());
-        intent.putExtra("school_name", school.getName());
-        intent.putExtra("school_type", school.getType());
-        intent.putExtra("school_location", school.getLocation());
-        intent.putExtra("school_rating", school.getRating());
-        intent.putExtra("school_fees", school.getFees());
-        intent.putExtra("school_description", school.getDescription());
-        intent.putExtra("school_requirements", school.getRequirements());
-        intent.putExtra("school_contact", school.getContact());
-        startActivity(intent);
+        // TODO: Open school detail page with performance data
+        Toast.makeText(this, "Opening " + school.getName(), Toast.LENGTH_SHORT).show();
+    }
+
+    private void showFilterOptions() {
+        // TODO: Show advanced filter dialog
+        Toast.makeText(this, "Advanced filters - Coming soon!", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public boolean onSupportNavigateUp() {
         onBackPressed();
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        locationHelper.stopLocationUpdates();
     }
 }
