@@ -955,4 +955,309 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.close();
         return document;
     }
+    // ==================== LOCATION & DISTRICT METHODS ====================
+
+public List<School> getSchoolsByDistrict(String district) {
+    List<School> schools = new ArrayList<>();
+    SQLiteDatabase db = this.getReadableDatabase();
+    
+    Cursor cursor = db.query(TABLE_SCHOOLS, null, 
+            SCHOOL_LOCATION + " LIKE ?",
+            new String[]{"%" + district + "%"}, 
+            null, null, SCHOOL_RATING + " DESC");
+    
+    if (cursor.moveToFirst()) {
+        do {
+            School school = new School(
+                cursor.getInt(0), cursor.getString(1), cursor.getString(2),
+                cursor.getString(3), cursor.getDouble(4), cursor.getInt(5),
+                cursor.getString(6), cursor.getString(7), cursor.getString(8)
+            );
+            schools.add(school);
+        } while (cursor.moveToNext());
+    }
+    cursor.close();
+    db.close();
+    return schools;
+}
+
+// ==================== SCHOOL PERFORMANCE METHODS ====================
+
+public boolean saveSchoolPerformance(int schoolId, SchoolPerformance performance) {
+    SQLiteDatabase db = this.getWritableDatabase();
+    
+    // Create performance table if not exists
+    db.execSQL("CREATE TABLE IF NOT EXISTS school_performance (" +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+            "school_id INTEGER," +
+            "overall_rating INTEGER," +
+            "pass_rate REAL," +
+            "bachelor_pass_rate REAL," +
+            "district_rank INTEGER," +
+            "strengths TEXT," +
+            "improvements TEXT," +
+            "achievements TEXT," +
+            "last_updated DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "FOREIGN KEY(school_id) REFERENCES " + TABLE_SCHOOLS + "(" + SCHOOL_ID + ")" +
+            ")");
+    
+    ContentValues values = new ContentValues();
+    values.put("school_id", schoolId);
+    values.put("overall_rating", performance.getOverallRating());
+    values.put("pass_rate", performance.getPassRate());
+    values.put("bachelor_pass_rate", performance.getBachelorPassRate());
+    values.put("district_rank", performance.getDistrictRank());
+    values.put("strengths", String.join("|", performance.getStrengths()));
+    values.put("improvements", String.join("|", performance.getImprovements()));
+    values.put("achievements", performance.getAchievements());
+    
+    // Check if performance data exists
+    Cursor cursor = db.query("school_performance", new String[]{"id"}, 
+            "school_id=?", new String[]{String.valueOf(schoolId)}, 
+            null, null, null);
+    
+    long result;
+    if (cursor.getCount() > 0) {
+        // Update existing
+        result = db.update("school_performance", values, "school_id=?", 
+                new String[]{String.valueOf(schoolId)});
+    } else {
+        // Insert new
+        result = db.insert("school_performance", null, values);
+    }
+    
+    cursor.close();
+    db.close();
+    return result != -1;
+}
+
+public SchoolPerformance getSchoolPerformance(int schoolId) {
+    SQLiteDatabase db = this.getReadableDatabase();
+    
+    Cursor cursor = db.rawQuery(
+            "SELECT * FROM school_performance WHERE school_id=?",
+            new String[]{String.valueOf(schoolId)}
+    );
+    
+    SchoolPerformance performance = null;
+    if (cursor.moveToFirst()) {
+        String schoolName = getSchoolById(schoolId).getName();
+        String[] strengths = cursor.getString(6).split("\\|");
+        String[] improvements = cursor.getString(7).split("\\|");
+        
+        performance = new SchoolPerformance(
+                schoolName,
+                cursor.getInt(2), // overall_rating
+                cursor.getDouble(3), // pass_rate
+                cursor.getDouble(4), // bachelor_pass_rate
+                cursor.getInt(5), // district_rank
+                strengths,
+                improvements,
+                cursor.getString(8) // achievements
+        );
+    }
+    
+    cursor.close();
+    db.close();
+    return performance;
+}
+
+// ==================== ENHANCED ML RECOMMENDATIONS WITH PERFORMANCE ====================
+
+public List<SchoolRecommendation> getEnhancedRecommendations(int userId, String district) {
+    List<SchoolRecommendation> recommendations = new ArrayList<>();
+    SQLiteDatabase db = this.getReadableDatabase();
+    
+    // Get schools in user's district with performance data
+    String query = "SELECT s.*, " +
+            "COALESCE(p.overall_rating, 75) as performance_rating, " +
+            "COALESCE(p.pass_rate, 85) as pass_rate " +
+            "FROM " + TABLE_SCHOOLS + " s " +
+            "LEFT JOIN school_performance p ON s." + SCHOOL_ID + " = p.school_id " +
+            "WHERE s." + SCHOOL_LOCATION + " LIKE ? " +
+            "ORDER BY performance_rating DESC, s." + SCHOOL_RATING + " DESC";
+    
+    Cursor cursor = db.rawQuery(query, new String[]{"%" + district + "%"});
+    
+    if (cursor.moveToFirst()) {
+        do {
+            School school = new School(
+                cursor.getInt(0), cursor.getString(1), cursor.getString(2),
+                cursor.getString(3), cursor.getDouble(4), cursor.getInt(5),
+                cursor.getString(6), cursor.getString(7), cursor.getString(8)
+            );
+            
+            int performanceRating = cursor.getInt(9);
+            double passRate = cursor.getDouble(10);
+            
+            // Calculate enhanced match score
+            double matchScore = calculateEnhancedMatchScore(school, performanceRating, passRate);
+            String reason = generateEnhancedReason(school, performanceRating, passRate, matchScore);
+            
+            // Save recommendation
+            ContentValues values = new ContentValues();
+            values.put("user_id", userId);
+            values.put("school_id", school.getId());
+            values.put("match_score", matchScore);
+            values.put("reason", reason);
+            
+            db.insert(TABLE_RECOMMENDATIONS, null, values);
+            
+            SchoolRecommendation rec = new SchoolRecommendation(
+                0, userId, school.getId(), matchScore, reason, "",
+                school.getName(), school.getType(), school.getLocation(),
+                school.getRating(), school.getFees(), school.getDescription()
+            );
+            recommendations.add(rec);
+            
+        } while (cursor.moveToNext());
+    }
+    
+    cursor.close();
+    db.close();
+    return recommendations;
+}
+
+private double calculateEnhancedMatchScore(School school, int performanceRating, double passRate) {
+    double score = 0.0;
+    
+    // School rating (20% weight) - reduced from 40%
+    score += (school.getRating() / 5.0) * 0.2;
+    
+    // Performance rating (35% weight) - NEW and most important
+    score += (performanceRating / 100.0) * 0.35;
+    
+    // Pass rate (25% weight) - NEW
+    score += (passRate / 100.0) * 0.25;
+    
+    // Affordability (15% weight) - reduced from 30%
+    double affordabilityScore = school.getFees() == 0 ? 1.0 : 
+        Math.max(0, 1.0 - (school.getFees() / 30000.0));
+    score += affordabilityScore * 0.15;
+    
+    // School type preference (5% weight) - reduced from 30%
+    score += (school.getType().equals("public") ? 0.05 : 0.04);
+    
+    return Math.min(1.0, score);
+}
+
+private String generateEnhancedReason(School school, int performanceRating, 
+                                     double passRate, double matchScore) {
+    StringBuilder reason = new StringBuilder();
+    
+    // Performance analysis
+    if (performanceRating >= 85) {
+        reason.append("Outstanding academic performance (").append(performanceRating).append("%). ");
+    } else if (performanceRating >= 75) {
+        reason.append("Strong academic performance (").append(performanceRating).append("%). ");
+    } else if (performanceRating >= 65) {
+        reason.append("Good academic performance (").append(performanceRating).append("%). ");
+    }
+    
+    // Pass rate
+    if (passRate >= 90) {
+        reason.append("Excellent pass rate (").append(String.format("%.1f", passRate)).append("%). ");
+    } else if (passRate >= 80) {
+        reason.append("High pass rate (").append(String.format("%.1f", passRate)).append("%). ");
+    }
+    
+    // School rating
+    if (school.getRating() >= 4.5) {
+        reason.append("Top-rated school. ");
+    } else if (school.getRating() >= 4.0) {
+        reason.append("Well-rated school. ");
+    }
+    
+    // Fees
+    if (school.getFees() == 0) {
+        reason.append("No tuition fees. ");
+    } else if (school.getFees() < 10000) {
+        reason.append("Affordable fees. ");
+    }
+    
+    // Match level
+    if (matchScore >= 0.8) {
+        reason.append("Perfect match for your profile!");
+    } else if (matchScore >= 0.6) {
+        reason.append("Excellent fit for you!");
+    } else if (matchScore >= 0.4) {
+        reason.append("Good option to consider.");
+    }
+    
+    return reason.toString().trim();
+}
+
+// ==================== STUDENT PROFILE METHODS ====================
+
+public boolean saveStudentProfile(int userId, StudentProfile profile) {
+    SQLiteDatabase db = this.getWritableDatabase();
+    
+    // Create student profile table if not exists
+    db.execSQL("CREATE TABLE IF NOT EXISTS student_profiles (" +
+            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+            "user_id INTEGER UNIQUE," +
+            "average_grade REAL," +
+            "preferred_subjects TEXT," +
+            "extracurricular TEXT," +
+            "district TEXT," +
+            "latitude REAL," +
+            "longitude REAL," +
+            "last_updated DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "FOREIGN KEY(user_id) REFERENCES " + TABLE_USERS + "(" + USER_ID + ")" +
+            ")");
+    
+    ContentValues values = new ContentValues();
+    values.put("user_id", userId);
+    values.put("average_grade", profile.getAverageGrade());
+    values.put("preferred_subjects", String.join(",", profile.getPreferredSubjects()));
+    values.put("extracurricular", String.join(",", profile.getExtracurricular()));
+    values.put("district", profile.getDistrict());
+    values.put("latitude", profile.getLatitude());
+    values.put("longitude", profile.getLongitude());
+    
+    // Check if profile exists
+    Cursor cursor = db.query("student_profiles", new String[]{"id"}, 
+            "user_id=?", new String[]{String.valueOf(userId)}, 
+            null, null, null);
+    
+    long result;
+    if (cursor.getCount() > 0) {
+        result = db.update("student_profiles", values, "user_id=?", 
+                new String[]{String.valueOf(userId)});
+    } else {
+        result = db.insert("student_profiles", null, values);
+    }
+    
+    cursor.close();
+    db.close();
+    return result != -1;
+}
+
+public StudentProfile getStudentProfile(int userId) {
+    SQLiteDatabase db = this.getReadableDatabase();
+    
+    Cursor cursor = db.query("student_profiles", null, 
+            "user_id=?", new String[]{String.valueOf(userId)}, 
+            null, null, null);
+    
+    StudentProfile profile = null;
+    if (cursor.moveToFirst()) {
+        String[] subjects = cursor.getString(3).split(",");
+        String[] extracurricular = cursor.getString(4).split(",");
+        
+        profile = new StudentProfile(
+                userId,
+                cursor.getDouble(2), // average_grade
+                subjects,
+                extracurricular,
+                cursor.getString(5), // district
+                cursor.getDouble(6), // latitude
+                cursor.getDouble(7)  // longitude
+        );
+    }
+    
+    cursor.close();
+    db.close();
+    return profile;
+}
 }
