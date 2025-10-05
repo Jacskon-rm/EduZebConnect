@@ -20,19 +20,15 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Validate Gradle wrapper
-      uses: gradle/wrapper-validation-action@v1
-
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: 8.0
-
-    - name: Make gradlew executable
-      run: chmod +x gradlew
+    - name: Download and setup Gradle wrapper
+      run: |
+        wget https://services.gradle.org/distributions/gradle-8.0-bin.zip
+        unzip -q gradle-8.0-bin.zip
+        ./gradle-8.0/bin/gradle wrapper
+        chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace --no-daemon
+      run: ./gradlew assembleDebug --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
