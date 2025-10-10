@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true"
     android:background="@drawable/login_gradient_bg">
 
     <LinearLayout
@@ -50,9 +51,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
+            android:layout_marginHorizontal="8dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="8dp"
-            android:layout_marginHorizontal="8dp">
+            app:cardElevation="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -107,9 +108,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.EduZeb.TextInput"
                     app:boxStrokeColor="@color/primary_blue"
-                    app:hintTextColor="@color/primary_blue"
                     app:startIconDrawable="@android:drawable/ic_menu_myplaces"
                     app:startIconTint="@color/primary_blue">
 
@@ -127,9 +127,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.EduZeb.TextInput"
                     app:boxStrokeColor="@color/primary_blue"
-                    app:hintTextColor="@color/primary_blue"
                     app:startIconDrawable="@android:drawable/ic_dialog_email"
                     app:startIconTint="@color/primary_blue">
 
@@ -147,9 +146,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.EduZeb.TextInput"
                     app:boxStrokeColor="@color/primary_blue"
-                    app:hintTextColor="@color/primary_blue"
                     app:startIconDrawable="@android:drawable/stat_sys_phone_call"
                     app:startIconTint="@color/primary_blue">
 
@@ -167,9 +165,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
                     app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.EduZeb.TextInput"
                     app:boxStrokeColor="@color/primary_blue"
-                    app:hintTextColor="@color/primary_blue"
                     app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
                     app:startIconTint="@color/primary_blue"
                     app:endIconMode="password_toggle"
@@ -189,9 +186,8 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="24dp"
                     app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.EduZeb.TextInput"
                     app:boxStrokeColor="@color/primary_blue"
-                    app:hintTextColor="@color/primary_blue"
                     app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
                     app:startIconTint="@color/primary_blue"
                     app:endIconMode="password_toggle"
@@ -208,89 +204,3 @@
                 <!-- Admin Code Field (Initially Hidden) -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layoutAdminCode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    android:visibility="gone"
-                    app:boxBackgroundMode="outline"
-                    app:boxCornerRadius="12dp"
-                    app:boxStrokeColor="@color/accent_orange"
-                    app:hintTextColor="@color/accent_orange"
-                    app:startIconDrawable="@android:drawable/ic_secure"
-                    app:startIconTint="@color/accent_orange"
-                    app:helperText="Enter admin authorization code"
-                    app:helperTextTextColor="@color/text_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAdminCode"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/admin_code"
-                        android:inputType="textPassword" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Terms and Conditions -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="24dp">
-
-                    <CheckBox
-                        android:id="@+id/cbTerms"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:buttonTint="@color/primary_blue" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/terms_conditions"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
-
-                <!-- Register Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRegister"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:text="Create Account"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:backgroundTint="@color/primary_blue"
-                    android:textColor="@color/white"
-                    app:cornerRadius="12dp"
-                    app:elevation="4dp" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Sign In Option -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/already_have_account"
-                android:textColor="@color/light_gray"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvSignIn"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text=" Sign In"
-                android:textColor="@color/accent_orange"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:clickable="true"
-                android:focusable="true" />
-        </LinearLayout>
-    </LinearLayout>
-</ScrollView>
